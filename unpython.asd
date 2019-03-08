@@ -8,4 +8,5 @@
   :pathname "src"
   :components ((:file "package")
                (:file "opcodes")
+               (:file "conditions")
                (:file "unpython")))

@@ -14,17 +14,20 @@
   (setf *stack* '())
   (setf *meta-stack* '())
   (setf *protocol* 0)
-  (setf *memo* (make-hash-table)))
+  (clrhash *memo*))
 
 (defun load-pickle (file)
   (reset)
   (with-open-file (pickle file :element-type '(unsigned-byte 8))
-    (let (res)
-      (loop for op-code = (read-byte pickle nil nil)
-            while op-code
-            do (setf res (perform-op op-code pickle)))
-      (setf *memo* (make-hash-table))
-      res)))
+    (handler-case
+        (loop for op-code = (read-byte pickle nil nil)
+              while op-code
+              do (perform-op op-code pickle))
+      (stop (stop-value)
+        (clrhash *memo*)
+        (return-from load-pickle (return-val stop-value)))))
+  (error 'unpickling-error :code 'None
+                           :error "Reached end of file before reading +STOP+ op code"))
 
 (defun bytes->long (bytes)
   (reduce #'(lambda (f s)
@@ -43,7 +46,8 @@
 (do-for +proto+ (stream)
   (let ((protocol (read-byte stream)))
     (unless (<= 0 protocol +highest-protocol+)
-      (error "+proto+ placeholder"))
+      (error 'unpickling-error :code '+proto+
+                               :error "Protocol not supported"))
     (setf *protocol* protocol)))
 
 (do-for +empty-list+ ()
@@ -68,7 +72,8 @@
 (do-for +binput+ (stream)
   (let ((i (read-byte stream)))
     (when (< i 0)
-      (error "+binput+ placeholder"))
+      (error 'unpickling-error :code '+binput+
+                               :error "Read byte less than 0"))
     (setf (gethash i *memo*) (first *stack*))))
 
 (do-for +long-binput+ (stream)
@@ -103,4 +108,4 @@
         do (push i (first *stack*))))
 
 (do-for +stop+ ()
-  (pop *stack*))
+  (signal 'stop :return-val (pop *stack*)))
