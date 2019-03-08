@@ -38,6 +38,11 @@ There's a wrapper macro to get rid of some of the boiler plate.
 When you give `()` after the op-code you ignore the stream.
 If you give `(<symbol>)` then you can pass that as a handle for the passed stream.
 
+```lisp
+(do-for +empty-list+ (stream)
+    (read-byte stream))
+```
+
 ## License
 
 Do whatever I don't really care.
