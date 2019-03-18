@@ -32,7 +32,8 @@
 (defun bytes->long (bytes)
   (reduce #'(lambda (f s)
               (+ (* s 256) f))
-          bytes))
+          bytes
+          :from-end t))
 
 (defun print-table-keys (table)
   (loop for k being the hash-keys in table
