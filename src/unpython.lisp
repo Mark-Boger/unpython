@@ -48,7 +48,9 @@
   (let ((protocol (read-byte stream)))
     (unless (<= 0 protocol +highest-protocol+)
       (error 'unpickling-error :code '+proto+
-                               :error "Protocol not supported"))
+                               :error (format nil
+                                              "Protocol ~A not supported"
+                                              protocol)))
     (setf *protocol* protocol)))
 
 (do-for +empty-list+ ()
@@ -74,7 +76,8 @@
   (let ((i (read-byte stream)))
     (when (< i 0)
       (error 'unpickling-error :code '+binput+
-                               :error "Read byte less than 0"))
+                               :error (format nil "Read byte less than 0 at pos ~A"
+                                              (- (file-position stream) 1))))
     (setf (gethash i *memo*) (first *stack*))))
 
 (do-for +long-binput+ (stream)

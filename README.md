@@ -4,16 +4,15 @@ Read pickled python object structures into Common Lisp.
 
 *Only tested on SBCL*
 
-## Implemented
+## Using
 
-* Strings (Unicode doesn't break it but it isn't handled correctly)
-* Dictionaries
-* Lists
-
-## TODO
-
-* Implement other types. (Added as needed)
-* Actually do error handling.
+```lisp
+CL-USER> (unpython:load-pickle "<path to project>/t/data/character_list.pkl")
+("a" "b")
+CL-USER> (unpython:load-pickle "<path to project>/t/data/large_dict.pkl")
+#<HASH-TABLE :TEST EQUAL :COUNT 21241 {1001A1B873}>
+CL-USER> 
+```
 
 ## Extending
 
@@ -42,6 +41,17 @@ If you give `(<symbol>)` then you can pass that as a handle for the passed strea
 (do-for +empty-list+ (stream)
     (read-byte stream))
 ```
+
+## Implemented
+
+* Strings (Unicode doesn't break it but it isn't handled correctly)
+* Dictionaries
+* Lists
+
+## TODO
+
+* Implement other types. (Added as needed)
+* Actually do error handling.
 
 ## License
 
