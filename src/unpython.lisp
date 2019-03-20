@@ -35,6 +35,31 @@
           bytes
           :from-end t))
 
+(defun byte-sequence->utf-8-codes (sequence)
+  (let ((len (1- (length sequence))))
+    (loop for i to len
+          collect (let ((byte (aref sequence i)))
+                    (cond
+                      ((<= byte #x7f)
+                       byte)
+
+                      ((<= #x80 byte #x7ff)
+                       (let ((bs (list (logand byte #x3f)
+                                       (logand (aref sequence (incf i))
+                                               #x7f))))
+                         (reduce #'(lambda (i b)
+                                     (logior (ash i 6) b))
+                                 bs)))
+
+                      ((<= #x800 byte #xffff)
+                       (error "UTF-8 (3) isn't implemented"))
+
+                      ((<= #x10000 byte #x2ffff)
+                       (error "UTF-8 (4) isn't implemented"))
+
+                      (t
+                       (error (format t "Invalide UTF-8: ~a~%" sequence))))))))
+
 (defun print-table-keys (table)
   (loop for k being the hash-keys in table
         do (print k)))
@@ -102,7 +127,8 @@
     (read-sequence len stream)
     (let ((data (make-array (bytes->long len))))
       (read-sequence data stream)
-      (push (map 'string 'code-char data) *stack*))))
+      (push (map 'string 'code-char (byte-sequence->utf-8-codes data))
+            *stack*))))
 
 (do-for +append+ ()
   (push (pop *stack*) (first *stack*)))

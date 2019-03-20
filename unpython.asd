@@ -12,7 +12,7 @@
                (:file "unpython"))
   :in-order-to ((asdf:test-op (asdf:test-op :unpython-test))))
 
-(asdf:defsystem #:unpython-test
+(asdf:defsystem #:unpython/test
   :description "Tests for unpytho"
   :author "Mark Boger <93mar.bog@gmail.com"
   :version "0.0.1"
