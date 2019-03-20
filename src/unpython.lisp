@@ -43,7 +43,7 @@
                       ((<= byte #x7f)
                        byte)
 
-                      ((<= #x80 byte #x7ff)
+                      ((<= #xc0 byte #xdf)
                        (let ((bs (list (logand byte #x3f)
                                        (logand (aref sequence (incf i))
                                                #x7f))))
@@ -51,14 +51,25 @@
                                      (logior (ash i 6) b))
                                  bs)))
 
-                      ((<= #x800 byte #xffff)
-                       (error "UTF-8 (3) isn't implemented"))
+                      ((<= #xe0 byte #xef)
+                       (let ((bs (list (logand byte #x0f)
+                                       (logand (aref sequence (incf i)) #x7f)
+                                       (logand (aref sequence (incf i)) #x7f))))
+                         (reduce #'(lambda (i b)
+                                     (logior (ash i 6) b))
+                                 bs)))
 
-                      ((<= #x10000 byte #x2ffff)
-                       (error "UTF-8 (4) isn't implemented"))
+                      ((<= #xf0 byte #xf7)
+                       (let ((bs (list (logand byte #x07)
+                                       (logand (aref sequence (incf i)) #x7f)
+                                       (logand (aref sequence (incf i)) #x7f)
+                                       (logand (aref sequence (incf i)) #x7f))))
+                         (reduce #'(lambda (i b)
+                                     (logior (ash i 6) b))
+                                 bs)))
 
                       (t
-                       (error (format t "Invalide UTF-8: ~a~%" sequence))))))))
+                       (error (format nil "Invalide UTF-8: ~a~%" sequence))))))))
 
 (defun print-table-keys (table)
   (loop for k being the hash-keys in table

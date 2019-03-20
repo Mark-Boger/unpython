@@ -44,9 +44,8 @@ If you give `(<symbol>)` then you can pass that as a handle for the passed strea
 
 ## Implemented
 
-* Strings 
-  - Unicode doesn't break it's only partly implemented
-  - Currently this a naive implementation so it is unsafe
+* Strings
+  - Unicode currently has a naive implementation so it is unsafe
 * Dictionaries
 * Lists
 
