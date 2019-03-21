@@ -29,51 +29,40 @@
   (error 'unpickling-error :code 'None
                            :error "Reached end of file before reading +STOP+ op code"))
 
-(defun bytes->long (bytes)
-  (reduce #'(lambda (f s)
-              (+ (* s 256) f))
-          bytes
-          :from-end t))
+(defun bytes->long (bytes &key from-end (size 8))
+  (flet ((big (int byte)
+           (logior (ash int size) byte))
+         (little (byte int)
+           (logior (ash int size) byte)))
+    (let ((f (if (null from-end)
+                 #'big
+                 #'little)))
+      (reduce f bytes :from-end from-end))))
 
-(defun byte-sequence->utf-8-codes (sequence)
+(defun byte-sequence->utf8-codes (sequence)
   (let ((len (1- (length sequence))))
-    (loop for i to len
-          collect (let ((byte (aref sequence i)))
-                    (cond
-                      ((<= byte #x7f)
-                       byte)
-
-                      ((<= #xc0 byte #xdf)
-                       (let ((bs (list (logand byte #x3f)
-                                       (logand (aref sequence (incf i))
-                                               #x7f))))
-                         (reduce #'(lambda (i b)
-                                     (logior (ash i 6) b))
-                                 bs)))
-
-                      ((<= #xe0 byte #xef)
-                       (let ((bs (list (logand byte #x0f)
-                                       (logand (aref sequence (incf i)) #x7f)
-                                       (logand (aref sequence (incf i)) #x7f))))
-                         (reduce #'(lambda (i b)
-                                     (logior (ash i 6) b))
-                                 bs)))
-
-                      ((<= #xf0 byte #xf7)
-                       (let ((bs (list (logand byte #x07)
-                                       (logand (aref sequence (incf i)) #x7f)
-                                       (logand (aref sequence (incf i)) #x7f)
-                                       (logand (aref sequence (incf i)) #x7f))))
-                         (reduce #'(lambda (i b)
-                                     (logior (ash i 6) b))
-                                 bs)))
-
-                      (t
-                       (error (format nil "Invalide UTF-8: ~a~%" sequence))))))))
-
-(defun print-table-keys (table)
-  (loop for k being the hash-keys in table
-        do (print k)))
+    (macrolet ((gen (byte mask num)
+                 (let ((byte-array (gensym)))
+                   `(let ((,byte-array (list
+                                        (logand ,byte ,mask)
+                                        ,@(loop repeat num
+                                                collect `(logand
+                                                          (aref sequence (incf i))
+                                                          #x7f)))))
+                      (bytes->long ,byte-array :size 6)))))
+      (loop for i to len
+            collect (let ((byte (aref sequence i)))
+                      (cond
+                        ((<= byte #x7f)
+                         byte)
+                        ((<= #xc0 byte #xdf)
+                         (gen byte #x3f 1))
+                        ((<= #xe0 byte #xef)
+                         (gen byte #x0f 2))
+                        ((<= #xf0 byte #xf7)
+                         (gen byte #x07 3))
+                        (t
+                         (error (format nil "Invalide UTF-8: ~a~%" sequence)))))))))
 
 (defun pop-mark ()
   (let ((items *stack*))
@@ -119,7 +108,7 @@
 (do-for +long-binput+ (stream)
   (let ((i (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence i stream)
-    (setf (gethash (bytes->long i) *memo*) (first *stack*))))
+    (setf (gethash (bytes->long i :from-end t) *memo*) (first *stack*))))
 
 (do-for +binget+ (stream)
   (push (gethash (read-byte stream) *memo*) *stack*))
@@ -127,7 +116,7 @@
 (do-for +long-binget+ (stream)
   (let ((i (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence i stream)
-    (push (gethash (bytes->long i) *memo*) *stack*)))
+    (push (gethash (bytes->long i :from-end t) *memo*) *stack*)))
 
 (do-for +mark+ ()
   (push *stack* *meta-stack*)
@@ -136,9 +125,9 @@
 (do-for +binunicode+ (stream)
   (let ((len (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence len stream)
-    (let ((data (make-array (bytes->long len))))
+    (let ((data (make-array (bytes->long len :from-end t))))
       (read-sequence data stream)
-      (push (map 'string 'code-char (byte-sequence->utf-8-codes data))
+      (push (map 'string 'code-char (byte-sequence->utf8-codes data))
             *stack*))))
 
 (do-for +append+ ()
