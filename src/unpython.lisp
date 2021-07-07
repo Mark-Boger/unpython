@@ -69,7 +69,7 @@
     (setf *stack* (pop *meta-stack*))
     items))
 
-(do-for +proto+ (stream)
+(on-load +proto+ (stream)
   (let ((protocol (read-byte stream)))
     (unless (<= 0 protocol +highest-protocol+)
       (error 'unpickling-error :code '+proto+
@@ -78,26 +78,26 @@
                                               protocol)))
     (setf *protocol* protocol)))
 
-(do-for +empty-list+ ()
+(on-load +empty-list+ ()
   (push '() *stack*))
 
-(do-for +empty-dict+ ()
+(on-load +empty-dict+ ()
   (push (make-hash-table :test 'equal) *stack*))
 
-(do-for +setitem+ ()
+(on-load +setitem+ ()
   (let ((values (pop *stack*))
         (key (pop *stack*))
         (dict (first *stack*)))
     (setf (gethash key dict) values)))
 
-(do-for +setitems+ ()
+(on-load +setitems+ ()
   ;; Have to do the pop first so we actually have a dict
   (let ((items (pop-mark))
         (dict (first *stack*)))
-    (loop for (i j) on items by #'cddr
-          do (setf (gethash j dict) i))))
+    (loop for (value key) on items by #'cddr
+          do (setf (gethash key dict) value))))
 
-(do-for +binput+ (stream)
+(on-load +binput+ (stream)
   (let ((i (read-byte stream)))
     (when (< i 0)
       (error 'unpickling-error :code '+binput+
@@ -105,24 +105,24 @@
                                               (- (file-position stream) 1))))
     (setf (gethash i *memo*) (first *stack*))))
 
-(do-for +long-binput+ (stream)
+(on-load +long-binput+ (stream)
   (let ((i (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence i stream)
     (setf (gethash (bytes->long i :from-end t) *memo*) (first *stack*))))
 
-(do-for +binget+ (stream)
+(on-load +binget+ (stream)
   (push (gethash (read-byte stream) *memo*) *stack*))
 
-(do-for +long-binget+ (stream)
+(on-load +long-binget+ (stream)
   (let ((i (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence i stream)
     (push (gethash (bytes->long i :from-end t) *memo*) *stack*)))
 
-(do-for +mark+ ()
+(on-load +mark+ ()
   (push *stack* *meta-stack*)
   (setf *stack* '()))
 
-(do-for +binunicode+ (stream)
+(on-load +binunicode+ (stream)
   (let ((len (make-array 4 :element-type '(unsigned-byte 8))))
     (read-sequence len stream)
     (let ((data (make-array (bytes->long len :from-end t))))
@@ -130,12 +130,13 @@
       (push (map 'string 'code-char (byte-sequence->utf8-codes data))
             *stack*))))
 
-(do-for +append+ ()
+(on-load +append+ ()
   (push (pop *stack*) (first *stack*)))
 
-(do-for +appends+ ()
+(on-load +appends+ ()
   (loop for i in (pop-mark)
         do (push i (first *stack*))))
 
-(do-for +stop+ ()
+(on-load +stop+ ()
   (signal 'stop :return-val (pop *stack*)))
+

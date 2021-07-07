@@ -3,12 +3,17 @@
 (defpackage #:unpython
   (:use #:cl)
   (:export
-   ;;;; Macros
-   #:perform-op
-   #:do-for
-
    ;;;; Functions
    #:load-pickle
+
+   ;;;; Generic Functions
+   #:perform-op
+
+   ;;;; Macros
+   #:on-load
+
+   ;;;; Variables
+   #:*protocol*
 
    ;;;; Op codes
    #:+mark+
@@ -77,6 +82,6 @@
    #:+stack-global+
    #:+memoize+
    #:+frame+
-
-   ;;;; Variables
-   #:*protocol*))
+   #:+bytearray8+
+   #:+next-buffer+
+   #:+readonly-buffer+))
